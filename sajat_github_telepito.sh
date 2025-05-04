@@ -1,27 +1,10 @@
 #!/bin/bash
 
-# Saját GitHub Repository Telepítő
-echo "==== Saját GitHub Repository Telepítő ===="
+# Tiszta telepítés a Waveshare GitHub-ról
+echo "==== Waveshare Tiszta Teszt ===="
 
-# GitHub adatok bekérése
-echo -n "Add meg a GitHub felhasználónevedet: "
-read github_user
-
-echo -n "Add meg a repository nevét: "
-read github_repo
-
-echo -n "Add meg a repository ágát (alapértelmezett: main): "
-read github_branch
-if [ -z "$github_branch" ]; then
-    github_branch="main"
-fi
-
-# GitHub URL összeállítása
-GITHUB_URL="https://github.com/$github_user/$github_repo.git"
-echo "Repository URL: $GITHUB_URL"
-
-# Telepítési könyvtár létrehozása
-INSTALL_DIR=~/my_waveshare_test
+# Tiszta telepítési könyvtár létrehozása
+INSTALL_DIR=~/waveshare_test
 echo "Telepítési könyvtár: $INSTALL_DIR"
 rm -rf $INSTALL_DIR
 mkdir -p $INSTALL_DIR
@@ -41,30 +24,13 @@ if ! grep -q "^dtparam=spi=on" /boot/config.txt; then
     REBOOT_NEEDED=true
 fi
 
-# Saját repository klónozása
-echo "Saját GitHub repository klónozása: $GITHUB_URL"
-git clone $GITHUB_URL -b $github_branch my_repo
-
-# Könyvtárstruktúra ellenőrzése
-echo "Könyvtárstruktúra ellenőrzése..."
-if [ -d "my_repo/RaspberryPi_JetsonNano/python/lib/waveshare_epd" ]; then
-    WAVESHARE_DIR="my_repo/RaspberryPi_JetsonNano/python/lib"
-    echo "Waveshare könyvtár megtalálva: $WAVESHARE_DIR"
-elif [ -d "my_repo/lib/waveshare_epd" ]; then
-    WAVESHARE_DIR="my_repo/lib"
-    echo "Waveshare könyvtár megtalálva: $WAVESHARE_DIR"
-elif [ -d "my_repo/waveshare_epd" ]; then
-    WAVESHARE_DIR="my_repo"
-    echo "Waveshare könyvtár megtalálva: $WAVESHARE_DIR"
-else
-    echo "HIBA: Nem található a waveshare_epd könyvtár a repositoryban!"
-    echo "Kérlek ellenőrizd a repository struktúráját."
-    exit 1
-fi
+# Waveshare könyvtár letöltése
+echo "Waveshare GitHub könyvtár letöltése..."
+git clone https://github.com/waveshare/e-Paper.git
 
 # Teszt program létrehozása
 echo "Teszt program létrehozása..."
-cat > $INSTALL_DIR/my_test.py << EOL
+cat > $INSTALL_DIR/clean_test.py << 'EOL'
 #!/usr/bin/env python3
 import os
 import sys
@@ -84,14 +50,20 @@ CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 logger.info(f"Aktuális könyvtár: {CURRENT_DIR}")
 
 # Elérési út hozzáadása
-WAVESHARE_DIR = os.path.join(CURRENT_DIR, "$WAVESHARE_DIR")
-sys.path.append(WAVESHARE_DIR)
-logger.info(f"Könyvtár hozzáadva: {WAVESHARE_DIR}")
+LIB_DIR = os.path.join(CURRENT_DIR, "e-Paper/RaspberryPi_JetsonNano/python/lib")
+sys.path.append(LIB_DIR)
+logger.info(f"Könyvtár hozzáadva: {LIB_DIR}")
 
 try:
     # Könyvtárak listázása ellenőrzésképpen
-    logger.info(f"Könyvtár tartalma:")
-    for item in os.listdir(WAVESHARE_DIR):
+    logger.info(f"Könyvtár tartalma ({LIB_DIR}):")
+    for item in os.listdir(LIB_DIR):
+        logger.info(f"  - {item}")
+    
+    # Waveshare_epd könyvtár ellenőrzése
+    waveshare_dir = os.path.join(LIB_DIR, "waveshare_epd")
+    logger.info(f"Waveshare könyvtár tartalma ({waveshare_dir}):")
+    for item in os.listdir(waveshare_dir):
         logger.info(f"  - {item}")
     
     # Waveshare könyvtár betöltése
@@ -124,9 +96,9 @@ try:
         font = ImageFont.load_default()
     
     # Szöveg kiírása
-    draw.text((120, 80), 'Saját GitHub Repo', font=font, fill='black')
+    draw.text((120, 80), 'Tiszta Teszt', font=font, fill='black')
     draw.text((120, 150), 'Waveshare e-Paper', font=font, fill='red')
-    draw.text((120, 220), 'Teszt Program', font=font, fill='blue')
+    draw.text((120, 220), 'GitHub Telepítés', font=font, fill='blue')
     draw.text((120, 290), f'Idő: {time.strftime("%H:%M:%S")}', font=font, fill='green')
     
     # Kép megjelenítése
@@ -141,12 +113,12 @@ except Exception as e:
 EOL
 
 # Jogosultságok beállítása
-chmod +x my_test.py
+chmod +x clean_test.py
 
 # Tesztprogram futtatása
 echo "Tesztprogram futtatása..."
 cd $INSTALL_DIR
-python3 my_test.py
+python3 clean_test.py
 
 echo "==== Teszt befejezve ===="
 if [ "$REBOOT_NEEDED" = "true" ]; then
